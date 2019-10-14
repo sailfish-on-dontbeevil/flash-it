@@ -40,19 +40,24 @@ echo "Some commands require root permissions, you might be asked to enter your s
 
 # Creating EXT4 file system
 echo -e "\e[1mCreating EXT4 file system...\e[0m"
-#sudo mkfs.ext4 $DEVICE_NODE
+sudo umount "/dev/sdd1"
+sudo umount "/dev/sdd2"
+sudo /sbin/parted $DEVICE_NODE mklabel gpt --script
+sudo mkfs.ext4 $DEVICE_NODE
 
 # Flashing u-boot
 echo -e "\e[1mFlashing U-boot...\e[0m"
 unzip "${UBOOT_JOB}.zip"
-#sudo dd if="./u-boot-bootloader/u-boot/u-boot-sunxi-with-spl.bin" of="$DEVICE_NODE" bs=8k seek=1
+sudo dd if="./u-boot-bootloader/u-boot/u-boot-sunxi-with-spl.bin" of="$DEVICE_NODE" bs=8k seek=1
+sync
 
 # Flashing rootFS
 echo -e "\e[1mFlashing rootFS...\e[0m"
 unzip "${ROOTFS_JOB}.zip"
 TEMP=`ls $ROOTFS_DIR/*/*.tar.bz2`
 echo "$TEMP"
-#sudo bsdtar -xpf "$TEMP" -C "$DEVICE_NODE"
+sudo bsdtar -xpf "$TEMP" -C "$DEVICE_NODE"
+sync
 
 # Clean up files
 echo -e "\e[1mCleaning up!\e[0m"
@@ -62,6 +67,5 @@ rm "${ROOTFS_JOB}.zip"
 rm -r "$ROOTFS_DIR"
 
 # Done :)
-sync
 echo -e "\e[1mFlashing $DEVICE_NODE OK!\e[0m"
 echo "You may now remove the SD card and insert it in your Pine64 device!"
