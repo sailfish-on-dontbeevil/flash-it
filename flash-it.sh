@@ -72,7 +72,9 @@ sync
 
 # Copying kernel to boot partition
 echo -e "\e[1mCopying kernel to boot partition...\e[0m"
-cp "$MOUNT_DATA/boot/*" "$MOUNT_BOOT"
+mkdir "$MOUNT_BOOT"
+sudo mount "${DEVICE_NODE}1" "$MOUNT_BOOT" # Mount boot partition
+sudo cp $MOUNT_DATA/boot/* $MOUNT_BOOT
 sync
 
 # Clean up files
