@@ -56,13 +56,13 @@ sudo mkfs.ext4 -F -L data "${DEVICE_NODE}2" # 2nd partition = data
 
 # Flashing u-boot
 echo -e "\e[1mFlashing U-boot...\e[0m"
-unzip "${UBOOT_JOB}.zip"
+unzip -f "${UBOOT_JOB}.zip"
 sudo dd if="./u-boot-bootloader/u-boot/u-boot-sunxi-with-spl.bin" of="$DEVICE_NODE" bs=8k seek=1
 sync
 
 # Flashing rootFS
 echo -e "\e[1mFlashing rootFS...\e[0m"
-unzip "${ROOTFS_JOB}.zip"
+unzip -f "${ROOTFS_JOB}.zip"
 TEMP=`ls $ROOTFS_DIR/*/*.tar.bz2`
 echo "$TEMP"
 mkdir "$MOUNT_DATA"
