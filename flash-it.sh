@@ -75,6 +75,7 @@ echo -e "\e[1mCopying kernel to boot partition...\e[0m"
 mkdir "$MOUNT_BOOT"
 sudo mount "${DEVICE_NODE}1" "$MOUNT_BOOT" # Mount boot partition
 sudo cp $MOUNT_DATA/boot/* $MOUNT_BOOT
+sudo cp "./u-boot-bootloader/$ROOTFS_DIR/boot.scr" "$MOUNT_BOOT/boot.scr"
 sync
 
 # Clean up files
