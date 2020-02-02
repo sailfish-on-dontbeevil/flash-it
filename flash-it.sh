@@ -13,6 +13,90 @@ ROOTFS_DEVKIT_DIR=devkit
 MOUNT_DATA=./data
 MOUNT_BOOT=./boot
 
+# Parse arguments
+# https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+
+case $key in
+    -b|--branch)
+        BRANCH="$2"
+        shift
+        shift
+        ;;
+    -h|--help)
+        echo "Sailfish OS flashing script for Pine64 devices"
+        echo ""
+        printf '%s\n' \
+               "This script will download the latest Sailfish OS image for the Pine" \
+               "Phone, Pine Phone dev kit, or Pine Tab. It requires that you have a" \
+               "micro SD card inserted into the computer." \
+               "" \
+               "usage: flash-it.sh [-b BRANCH]" \
+               "" \
+               "Options:" \
+               "" \
+               "	-b, --branch BRANCH	Download images from a specific Git branch." \
+               "	-h, --help		Print this help and exit." \
+               "" \
+               "This command requires: parted, sudo, wget, tar, unzip, lsblk," \
+               "mkfs.ext4." \
+               ""\
+               "Some distros do not have parted on the PATH. If necessary, add" \
+               "parted to the PATH before running the script."
+
+        exit 0
+        shift
+        ;;
+    *) # unknown argument
+        POSITIONAL+=("$1") # save it in an array for later
+        shift # past argument
+        ;;
+esac
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
+
+# Helper functions
+# Error out if the given command is not found on the PATH.
+function check_dependency {
+    dependency=$1
+    command -v $dependency >/dev/null 2>&1 || {
+        echo >&2 "${dependency} not found. Please make sure it is installed and on your PATH."; exit 1;
+    }
+}
+
+# Determine if wget supports the --show-progress option (introduced in
+# 1.16). If so, make use of that instead of spewing out redirects and
+# loads of info into the terminal.
+function wget_cmd {
+    wget --show-progress > /dev/null 2>&1
+    status=$?
+
+    # Exit code 2 means command parsing error (i.e. option does not
+    # exist).
+    if [ "$status" == "2" ]; then
+        echo "wget -O"
+    else
+        echo "wget -q --show-progress -O"
+    fi
+}
+
+# Check dependencies
+check_dependency "parted"
+check_dependency "sudo"
+check_dependency "wget"
+check_dependency "tar"
+check_dependency "unzip"
+check_dependency "lsblk"
+check_dependency "mkfs.ext4"
+
+# Different branch for some reason?
+if [ "${BRANCH}" != "master" ]; then
+    echo -e "\e[1m\e[97m!!! Will flash image from ${BRANCH} branch !!!\e[0m"
+fi
+
 # Header
 echo -e "\e[1m\e[91mSailfish OS Pine64 device flasher V$VERSION\e[0m"
 echo "======================================"
@@ -27,11 +111,21 @@ select OPTION in "PinePhone device" "PineTab device" "Dont Be Evil devkit"; do
         "Dont Be Evil devkit" ) ROOTFS_JOB=$ROOTFS_DEVKIT_JOB; ROOTFS_DIR=$ROOTFS_DEVKIT_DIR; break;;
     esac
 done
-    
+
 # Downloading images
 echo -e "\e[1mDownloading images...\e[0m"
-wget -O "${UBOOT_JOB}.zip" "https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$UBOOT_JOB"
-wget -O "${ROOTFS_JOB}.zip" "https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$ROOTFS_JOB"
+WGET=$(wget_cmd)
+UBOOT_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$UBOOT_JOB"
+$WGET "${UBOOT_JOB}.zip" "${UBOOT_DOWNLOAD}" || {
+    echo >&2 "UBoot image download failed. Aborting."
+    exit 2
+}
+
+ROOTFS_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$ROOTFS_JOB"
+$WGET "${ROOTFS_JOB}.zip" "${ROOTFS_DOWNLOAD}" || {
+    echo >&2 "Root filesystem image download failed. Aborting."
+    exit 2
+}
 
 # Select flash target
 echo -e "\e[1mWhich SD card do you want to flash?\e[0m"
@@ -48,9 +142,9 @@ do
     echo "Unmounting $PARTITION"
     sudo umount $PARTITION
 done
-sudo /sbin/parted $DEVICE_NODE mklabel msdos --script
-sudo /sbin/parted $DEVICE_NODE mkpart primary ext4 1MB 250MB --script
-sudo /sbin/parted $DEVICE_NODE mkpart primary ext4 250MB 100% --script
+sudo parted $DEVICE_NODE mklabel msdos --script
+sudo parted $DEVICE_NODE mkpart primary ext4 1MB 250MB --script
+sudo parted $DEVICE_NODE mkpart primary ext4 250MB 100% --script
 sudo mkfs.ext4 -F -L boot "${DEVICE_NODE}1" # 1st partition = boot
 sudo mkfs.ext4 -F -L data "${DEVICE_NODE}2" # 2nd partition = data
 
@@ -67,7 +161,7 @@ TEMP=`ls $ROOTFS_DIR/*/*.tar.bz2`
 echo "$TEMP"
 mkdir "$MOUNT_DATA"
 sudo mount "${DEVICE_NODE}2" "$MOUNT_DATA" # Mount data partition
-sudo bsdtar -xpf "$TEMP" -C "$MOUNT_DATA"
+sudo tar -xpf "$TEMP" -C "$MOUNT_DATA"
 sync
 
 # Copying kernel to boot partition
