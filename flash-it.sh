@@ -1,7 +1,11 @@
 #!/bin/bash
 
 VERSION="0.2.0"
-BRANCH=master UBOOT_JOB=u-boot UBOOT_DIR=u-boot-bootloader ROOTFS_PINEPHONE_JOB=pinephone-rootfs ROOTFS_PINETAB_JOB=pinetab-rootfs
+BRANCH=master
+UBOOT_JOB=u-boot
+UBOOT_DIR=u-boot-bootloader
+ROOTFS_PINEPHONE_JOB=pinephone-rootfs
+ROOTFS_PINETAB_JOB=pinetab-rootfs
 ROOTFS_DEVKIT_JOB=devkit-rootfs
 ROOTFS_PINEPHONE_DIR=pinephone
 ROOTFS_PINETAB_DIR=pinetab
