@@ -112,19 +112,25 @@ select OPTION in "PinePhone device" "PineTab device" "Dont Be Evil devkit"; do
     esac
 done
 
-# Downloading images
-echo -e "\e[1mDownloading images...\e[0m"
-WGET=$(wget_cmd)
-UBOOT_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$UBOOT_JOB"
-$WGET "${UBOOT_JOB}.zip" "${UBOOT_DOWNLOAD}" || {
-    echo >&2 "UBoot image download failed. Aborting."
-    exit 2
+# Check if already downloaded before downloading
+ls pinephone-rootfs.zip || {
+	# Downloading images
+	echo -e "\e[1mDownloading images...\e[0m"
+	WGET=$(wget_cmd)
+	UBOOT_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$UBOOT_JOB"
+	$WGET "${UBOOT_JOB}.zip" "${UBOOT_DOWNLOAD}" || {
+    	echo >&2 "UBoot image download failed. Aborting."
+    	exit 2
+	}
 }
 
-ROOTFS_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$ROOTFS_JOB"
-$WGET "${ROOTFS_JOB}.zip" "${ROOTFS_DOWNLOAD}" || {
-    echo >&2 "Root filesystem image download failed. Aborting."
-    exit 2
+# Check if already downloaded before downloading
+ls u-boot.zip || {
+	ROOTFS_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$ROOTFS_JOB"
+	$WGET "${ROOTFS_JOB}.zip" "${ROOTFS_DOWNLOAD}" || {
+    	echo >&2 "Root filesystem image download failed. Aborting."
+    	exit 2
+	}
 }
 
 # Select flash target
@@ -135,6 +141,7 @@ echo "Flashing image to: $DEVICE_NODE"
 echo "WARNING: All data will be erased! You have been warned!"
 echo "Some commands require root permissions, you might be asked to enter your sudo password."
 
+# use p1, p2 extentions instead of 1, 2 when using sd drives
 if [[ $(echo $DEVICE_NODE | grep mmcblk) ]]; then
 	BOOTPART="${DEVICE_NODE}p1"
 	DATAPART="${DEVICE_NODE}p2"
