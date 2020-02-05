@@ -1,11 +1,7 @@
 #!/bin/bash
 
 VERSION="0.2.0"
-BRANCH=master
-UBOOT_JOB=u-boot
-UBOOT_DIR=u-boot-bootloader
-ROOTFS_PINEPHONE_JOB=pinephone-rootfs
-ROOTFS_PINETAB_JOB=pinetab-rootfs
+BRANCH=master UBOOT_JOB=u-boot UBOOT_DIR=u-boot-bootloader ROOTFS_PINEPHONE_JOB=pinephone-rootfs ROOTFS_PINETAB_JOB=pinetab-rootfs
 ROOTFS_DEVKIT_JOB=devkit-rootfs
 ROOTFS_PINEPHONE_DIR=pinephone
 ROOTFS_PINETAB_DIR=pinetab
@@ -113,7 +109,7 @@ select OPTION in "PinePhone device" "PineTab device" "Dont Be Evil devkit"; do
 done
 
 # Check if already downloaded before downloading
-ls pinephone-rootfs.zip || {
+ls u-boot.zip || {
 	# Downloading images
 	echo -e "\e[1mDownloading images...\e[0m"
 	WGET=$(wget_cmd)
@@ -125,7 +121,7 @@ ls pinephone-rootfs.zip || {
 }
 
 # Check if already downloaded before downloading
-ls u-boot.zip || {
+ls pinephone-rootfs.zip || {
 	ROOTFS_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$ROOTFS_JOB"
 	$WGET "${ROOTFS_JOB}.zip" "${ROOTFS_DOWNLOAD}" || {
     	echo >&2 "Root filesystem image download failed. Aborting."
