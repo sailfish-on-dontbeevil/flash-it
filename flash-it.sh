@@ -135,6 +135,14 @@ echo "Flashing image to: $DEVICE_NODE"
 echo "WARNING: All data will be erased! You have been warned!"
 echo "Some commands require root permissions, you might be asked to enter your sudo password."
 
+if [[ $(echo $DEVICE_NODE | grep mmcblk) ]]; then
+	BOOTPART="${DEVICE_NODE}p1"
+	DATAPART="${DEVICE_NODE}p2"
+else
+	BOOTPART="${DEVICE_NODE}1"
+	DATAPART="${DEVICE_NODE}2"
+fi
+
 # Creating EXT4 file system
 echo -e "\e[1mCreating EXT4 file system...\e[0m"
 for PARTITION in $(ls ${DEVICE_NODE}*)
@@ -145,8 +153,8 @@ done
 sudo parted $DEVICE_NODE mklabel msdos --script
 sudo parted $DEVICE_NODE mkpart primary ext4 1MB 250MB --script
 sudo parted $DEVICE_NODE mkpart primary ext4 250MB 100% --script
-sudo mkfs.ext4 -F -L boot "${DEVICE_NODE}1" # 1st partition = boot
-sudo mkfs.ext4 -F -L data "${DEVICE_NODE}2" # 2nd partition = data
+sudo mkfs.ext4 -F -L boot $BOOTPART # 1st partition = boot
+sudo mkfs.ext4 -F -L data $DATAPART # 2nd partition = data
 
 # Flashing u-boot
 echo -e "\e[1mFlashing U-boot...\e[0m"
@@ -160,14 +168,14 @@ unzip "${ROOTFS_JOB}.zip"
 TEMP=`ls $ROOTFS_DIR/*/*.tar.bz2`
 echo "$TEMP"
 mkdir "$MOUNT_DATA"
-sudo mount "${DEVICE_NODE}2" "$MOUNT_DATA" # Mount data partition
+sudo mount $DATAPART "$MOUNT_DATA" # Mount data partition
 sudo tar -xpf "$TEMP" -C "$MOUNT_DATA"
 sync
 
 # Copying kernel to boot partition
 echo -e "\e[1mCopying kernel to boot partition...\e[0m"
 mkdir "$MOUNT_BOOT"
-sudo mount "${DEVICE_NODE}1" "$MOUNT_BOOT" # Mount boot partition
+sudo mount $BOOTPART "$MOUNT_BOOT" # Mount boot partition
 sudo cp $MOUNT_DATA/boot/* $MOUNT_BOOT
 sudo cp "./u-boot-bootloader/$ROOTFS_DIR/boot.scr" "$MOUNT_BOOT/boot.scr"
 sync
