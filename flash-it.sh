@@ -112,25 +112,19 @@ select OPTION in "PinePhone device" "PineTab device" "Dont Be Evil devkit"; do
     esac
 done
 
-# Check if already downloaded before downloading
-ls u-boot.zip || {
-	# Downloading images
-	echo -e "\e[1mDownloading images...\e[0m"
-	WGET=$(wget_cmd)
-	UBOOT_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$UBOOT_JOB"
-	$WGET "${UBOOT_JOB}.zip" "${UBOOT_DOWNLOAD}" || {
-    	echo >&2 "UBoot image download failed. Aborting."
-    	exit 2
-	}
+# Downloading images
+echo -e "\e[1mDownloading images...\e[0m"
+WGET=$(wget_cmd)
+UBOOT_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$UBOOT_JOB"
+$WGET "${UBOOT_JOB}.zip" "${UBOOT_DOWNLOAD}" || {
+	echo >&2 "UBoot image download failed. Aborting."
+	exit 2
 }
 
-# Check if already downloaded before downloading
-ls pinephone-rootfs.zip || {
-	ROOTFS_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$ROOTFS_JOB"
-	$WGET "${ROOTFS_JOB}.zip" "${ROOTFS_DOWNLOAD}" || {
-    	echo >&2 "Root filesystem image download failed. Aborting."
-    	exit 2
-	}
+ROOTFS_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$ROOTFS_JOB"
+$WGET "${ROOTFS_JOB}.zip" "${ROOTFS_DOWNLOAD}" || {
+	echo >&2 "Root filesystem image download failed. Aborting."
+	exit 2
 }
 
 # Select flash target
