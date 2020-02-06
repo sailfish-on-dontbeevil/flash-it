@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd $(dirname $0) # Change directory to the scripts directory to make sure that all filepaths are correct and all downloads end up in the scripts directory
+
 VERSION="0.2.0"
 BRANCH=master
 UBOOT_JOB=u-boot
@@ -113,18 +115,22 @@ select OPTION in "PinePhone device" "PineTab device" "Dont Be Evil devkit"; do
 done
 
 # Downloading images
-echo -e "\e[1mDownloading images...\e[0m"
-WGET=$(wget_cmd)
-UBOOT_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$UBOOT_JOB"
-$WGET "${UBOOT_JOB}.zip" "${UBOOT_DOWNLOAD}" || {
-	echo >&2 "UBoot image download failed. Aborting."
-	exit 2
+ls "${UBOOT_JOB}.zip" || {
+	echo -e "\e[1mDownloading images...\e[0m"
+	WGET=$(wget_cmd)
+	UBOOT_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$UBOOT_JOB"
+	$WGET "${UBOOT_JOB}.zip" "${UBOOT_DOWNLOAD}" || {
+		echo >&2 "UBoot image download failed. Aborting."
+		exit 2
+	}
 }
 
-ROOTFS_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$ROOTFS_JOB"
-$WGET "${ROOTFS_JOB}.zip" "${ROOTFS_DOWNLOAD}" || {
-	echo >&2 "Root filesystem image download failed. Aborting."
-	exit 2
+ls "${ROOTFS_JOB}.zip" || {
+	ROOTFS_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$ROOTFS_JOB"
+	$WGET "${ROOTFS_JOB}.zip" "${ROOTFS_DOWNLOAD}" || {
+		echo >&2 "Root filesystem image download failed. Aborting."
+		exit 2
+	}
 }
 
 # Select flash target
