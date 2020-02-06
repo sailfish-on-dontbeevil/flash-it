@@ -1,7 +1,5 @@
 #!/bin/bash
 
-cd $(dirname $0) # Change directory to the scripts directory to make sure that all filepaths are correct and all downloads end up in the scripts directory
-
 VERSION="0.2.0"
 BRANCH=master
 UBOOT_JOB=u-boot
