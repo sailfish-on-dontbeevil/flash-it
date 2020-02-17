@@ -100,6 +100,7 @@ check_dependency "tar"
 check_dependency "unzip"
 check_dependency "lsblk"
 check_dependency "mkfs.ext4"
+check_dependency "losetup"
 
 # If use custom dir check it
 if [ "$CUSTOM" != "" ]; then
@@ -162,18 +163,16 @@ fi
 # Select flash target
 echo -e "\e[1mWhich SD card do you want to flash?\e[0m"
 lsblk
+echo "raw"
 read -p "Device node (/dev/sdX): " DEVICE_NODE
 echo "Flashing image to: $DEVICE_NODE"
 echo "WARNING: All data will be erased! You have been warned!"
 echo "Some commands require root permissions, you might be asked to enter your sudo password."
 
-# use p1, p2 extentions instead of 1, 2 when using sd drives
-if [[ $(echo $DEVICE_NODE | grep mmcblk) ]]; then
-	BOOTPART="${DEVICE_NODE}p1"
-	DATAPART="${DEVICE_NODE}p2"
-else
-	BOOTPART="${DEVICE_NODE}1"
-	DATAPART="${DEVICE_NODE}2"
+#create loop file for raw.img
+if [ $DEVICE_NODE == "raw" ]; then
+	sudo dd if=/dev/zero of=sdcard.img bs=1 count=0 seek=4G
+	DEVICE_NODE="./sdcard.img"
 fi
 
 # Creating EXT4 file system
@@ -186,6 +185,24 @@ done
 sudo parted $DEVICE_NODE mklabel msdos --script
 sudo parted $DEVICE_NODE mkpart primary ext4 1MB 250MB --script
 sudo parted $DEVICE_NODE mkpart primary ext4 250MB 100% --script
+
+if [ $DEVICE_NODE == "./sdcard.img" ]; then
+	echo "Prepare loop file"
+	sudo losetup -D
+	sudo losetup -Pf sdcard.img
+	LOOP_NODE=`ls /dev/loop?p1 | cut -c10-10`
+	DEVICE_NODE="/dev/loop$LOOP_NODE"
+fi
+
+# use p1, p2 extentions instead of 1, 2 when using sd drives
+if [ [ $(echo $DEVICE_NODE | grep mmcblk) ] || [ $(echo $DEVICE_NODE | grep loop)] ]; then
+	BOOTPART="${DEVICE_NODE}p1"
+	DATAPART="${DEVICE_NODE}p2"
+else
+	BOOTPART="${DEVICE_NODE}1"
+	DATAPART="${DEVICE_NODE}2"
+fi
+
 sudo mkfs.ext4 -F -L boot $BOOTPART # 1st partition = boot
 sudo mkfs.ext4 -F -L data $DATAPART # 2nd partition = data
 
@@ -233,14 +250,16 @@ do
     sudo umount $PARTITION
 done
 
+sudo losetup -D
+
 if [ "$CUSTOM" == "" ]; then
 rm "${UBOOT_JOB}.zip"
 rm -r "$UBOOT_DIR"
 rm "${ROOTFS_JOB}.zip"
 rm -r "$ROOTFS_DIR"
 fi
-rm -rf "$MOUNT_DATA"
-rm -rf "$MOUNT_BOOT"
+sudo rm -rf "$MOUNT_DATA"
+sudo rm -rf "$MOUNT_BOOT"
 
 # Done :)
 echo -e "\e[1mFlashing $DEVICE_NODE OK!\e[0m"
