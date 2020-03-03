@@ -195,7 +195,7 @@ if [ $DEVICE_NODE == "./sdcard.img" ]; then
 fi
 
 # use p1, p2 extentions instead of 1, 2 when using sd drives
-if [ [ $(echo $DEVICE_NODE | grep mmcblk) ] || [ $(echo $DEVICE_NODE | grep loop)] ]; then
+if [ $(echo $DEVICE_NODE | grep mmcblk || echo $DEVICE_NODE | grep loop) ]; then
 	BOOTPART="${DEVICE_NODE}p1"
 	DATAPART="${DEVICE_NODE}p2"
 else
