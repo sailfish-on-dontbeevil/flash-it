@@ -1,14 +1,16 @@
 #!/bin/bash
 
-VERSION="0.2.0"
-BRANCH=master
+VERSION="0.3.0"
+BRANCH=pinephone-versions
 CUSTOM=""
 UBOOT_JOB=u-boot
 UBOOT_DIR=u-boot-bootloader
-ROOTFS_PINEPHONE_JOB=pinephone-rootfs
+ROOTFS_PINEPHONE_1_0_JOB=pinephone-1.0-rootfs
+ROOTFS_PINEPHONE_1_1_JOB=pinephone-1.1-rootfs
 ROOTFS_PINETAB_JOB=pinetab-rootfs
 ROOTFS_DEVKIT_JOB=devkit-rootfs
-ROOTFS_PINEPHONE_DIR=pinephone
+ROOTFS_PINEPHONE_1_0_DIR=pinephone-1.0
+ROOTFS_PINEPHONE_1_1_DIR=pinephone-1.1
 ROOTFS_PINETAB_DIR=pinetab
 ROOTFS_DEVKIT_DIR=devkit
 MOUNT_DATA=./data
@@ -136,9 +138,10 @@ echo ""
 
 # Image selection
 echo -e "\e[1mWhich image do you want to flash?\e[0m"
-select OPTION in "PinePhone device" "PineTab device" "Dont Be Evil devkit"; do
+select OPTION in "PinePhone 1.0 (Development) device" "PinePhone 1.1 (Brave Heart) device" "PineTab device" "Dont Be Evil devkit"; do
     case $OPTION in
-        "PinePhone device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_DIR; break;;
+        "PinePhone 1.0 (Development) device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_1_0_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_1_0_DIR; break;;
+        "PinePhone 1.1 (Brave Heart) device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_1_1_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_1_1_DIR; break;;
         "PineTab device" ) ROOTFS_JOB=$ROOTFS_PINETAB_JOB; ROOTFS_DIR=$ROOTFS_PINETAB_DIR; break;;
         "Dont Be Evil devkit" ) ROOTFS_JOB=$ROOTFS_DEVKIT_JOB; ROOTFS_DIR=$ROOTFS_DEVKIT_DIR; break;;
     esac
