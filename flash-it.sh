@@ -1,7 +1,7 @@
 #!/bin/bash
 
-VERSION="0.3.0"
-BRANCH=pinephone-versions
+VERSION="0.3.1"
+BRANCH=master
 CUSTOM=""
 UBOOT_JOB=u-boot
 UBOOT_DIR=u-boot-bootloader
