@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="0.3.1"
+VERSION="0.3.2"
 BRANCH=master
 CUSTOM=""
 UBOOT_JOB=u-boot
@@ -223,11 +223,11 @@ sync
 echo -e "\e[1mFlashing rootFS...\e[0m"
 mkdir "$MOUNT_DATA"
 if [ "$CUSTOM" != "" ]; then
-TEMP="${CUSTOM}/rootfs.tar.bz2"
+    TEMP="${CUSTOM}/rootfs.tar.bz2"
 else
-unzip "${ROOTFS_JOB}.zip"
-TEMP=`ls $ROOTFS_DIR/*/*.tar.bz2`
-echo "$TEMP"
+    unzip "${ROOTFS_JOB}.zip"
+    TEMP=`ls $ROOTFS_DIR/*/*.tar.bz2`
+    echo "$TEMP"
 fi
 sudo mount $DATAPART "$MOUNT_DATA" # Mount data partition
 sudo tar -xpf "$TEMP" -C "$MOUNT_DATA"
@@ -237,11 +237,15 @@ sync
 echo -e "\e[1mCopying kernel to boot partition...\e[0m"
 mkdir "$MOUNT_BOOT"
 sudo mount $BOOTPART "$MOUNT_BOOT" # Mount boot partition
-sudo cp $MOUNT_DATA/boot/* $MOUNT_BOOT
+echo "Boot partition mount: $MOUNT_BOOT"
+sudo sh -c "cp $MOUNT_DATA/boot/Image $MOUNT_BOOT"
+sudo sh -c "cp $MOUNT_DATA/boot/*.dtb $MOUNT_BOOT"
+sudo sh -c "cp $MOUNT_DATA/boot/*.dts $MOUNT_BOOT"
+echo `ls $MOUNT_BOOT`
 if [ "$CUSTOM" != "" ]; then
-sudo cp "${CUSTOM}/boot.scr" "$MOUNT_BOOT/boot.scr"
+    sudo sh -c "cp '${CUSTOM}/boot.scr' '$MOUNT_BOOT/boot.scr'"
 else
-sudo cp "./u-boot-bootloader/$ROOTFS_DIR/boot.scr" "$MOUNT_BOOT/boot.scr"
+    sudo sh -c "cp './u-boot-bootloader/$ROOTFS_DIR/boot.scr' '$MOUNT_BOOT/boot.scr'"
 fi
 sync
 
@@ -256,10 +260,10 @@ done
 sudo losetup -D
 
 if [ "$CUSTOM" == "" ]; then
-rm "${UBOOT_JOB}.zip"
-rm -r "$UBOOT_DIR"
-rm "${ROOTFS_JOB}.zip"
-rm -r "$ROOTFS_DIR"
+    rm "${UBOOT_JOB}.zip"
+    rm -r "$UBOOT_DIR"
+    rm "${ROOTFS_JOB}.zip"
+    rm -r "$ROOTFS_DIR"
 fi
 sudo rm -rf "$MOUNT_DATA"
 sudo rm -rf "$MOUNT_BOOT"
