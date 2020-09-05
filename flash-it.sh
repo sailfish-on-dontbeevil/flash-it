@@ -238,9 +238,8 @@ echo -e "\e[1mCopying kernel to boot partition...\e[0m"
 mkdir "$MOUNT_BOOT"
 sudo mount $BOOTPART "$MOUNT_BOOT" # Mount boot partition
 echo "Boot partition mount: $MOUNT_BOOT"
-sudo sh -c "cp $MOUNT_DATA/boot/Image $MOUNT_BOOT"
-sudo sh -c "cp $MOUNT_DATA/boot/*.dtb $MOUNT_BOOT"
-sudo sh -c "cp $MOUNT_DATA/boot/*.dts $MOUNT_BOOT"
+sudo sh -c "cp -r $MOUNT_DATA/boot/* $MOUNT_BOOT"
+
 echo `ls $MOUNT_BOOT`
 if [ "$CUSTOM" != "" ]; then
     sudo sh -c "cp '${CUSTOM}/boot.scr' '$MOUNT_BOOT/boot.scr'"
