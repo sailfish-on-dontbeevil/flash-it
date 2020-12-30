@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="0.3.2"
+VERSION="0.3.3"
 BRANCH=master
 CUSTOM=""
 UBOOT_JOB=u-boot
@@ -167,6 +167,13 @@ $WGET "${UBOOT_JOB}.zip" "${UBOOT_DOWNLOAD}" || {
 	exit 2
 }
 
+UBOOT_DOWNLOAD2="https://gitlab.com/pine64-org/crust-meta/-/jobs/artifacts/master/raw/u-boot-sunxi-with-spl-pinephone.bin?job=build"
+$WGET "u-boot-sunxi-with-spl-pinephone.bin" "${UBOOT_DOWNLOAD2}" || {
+	echo >&2 "UBoot image download failed. Aborting."
+	exit 2
+}
+
+
 ROOTFS_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$ROOTFS_JOB"
 $WGET "${ROOTFS_JOB}.zip" "${ROOTFS_DOWNLOAD}" || {
 	echo >&2 "Root filesystem image download failed. Aborting."
@@ -226,7 +233,7 @@ if [ "$CUSTOM" != "" ]; then
 sudo dd if="${CUSTOM}/u-boot-sunxi-with-spl.bin" of="$DEVICE_NODE" bs=8k seek=1
 else
 unzip "${UBOOT_JOB}.zip"
-sudo dd if="./u-boot-bootloader/u-boot/u-boot-sunxi-with-spl.bin" of="$DEVICE_NODE" bs=8k seek=1
+sudo dd if="./u-boot-sunxi-with-spl-pinephone.bin" of="$DEVICE_NODE" bs=8k seek=1
 fi
 sync
 
