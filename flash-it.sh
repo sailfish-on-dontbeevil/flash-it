@@ -88,6 +88,13 @@ function check_dependency {
     }
 }
 
+# Add sbin to the PATH to check for commands available to sudo
+function check_sudo_dependency {
+    dependency=$1
+    local PATH=$PATH:/sbin:/usr/sbin:/usr/local/sbin
+    check_dependency $dependency
+}
+
 # Determine if wget supports the --show-progress option (introduced in
 # 1.16). If so, make use of that instead of spewing out redirects and
 # loads of info into the terminal.
@@ -105,14 +112,14 @@ function wget_cmd {
 }
 
 # Check dependencies
-check_dependency "parted"
 check_dependency "sudo"
 check_dependency "wget"
 check_dependency "tar"
 check_dependency "unzip"
 check_dependency "lsblk"
-check_dependency "mkfs.ext4"
-check_dependency "losetup"
+check_sudo_dependency "parted"
+check_sudo_dependency "mkfs.ext4"
+check_sudo_dependency "losetup"
 
 # If use custom dir check it
 if [ "$CUSTOM" != "" ]; then
