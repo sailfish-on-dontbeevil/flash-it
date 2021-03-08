@@ -288,6 +288,7 @@ if [ "$CUSTOM" == "" ]; then
     rm -r "$UBOOT_DIR"
     rm "${ROOTFS_JOB}.zip"
     rm -r "$ROOTFS_DIR"
+    rm "u-boot-sunxi-with-spl-pinephone.bin"
 fi
 sudo rm -rf "$MOUNT_DATA"
 sudo rm -rf "$MOUNT_BOOT"
