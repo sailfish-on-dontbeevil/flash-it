@@ -176,7 +176,7 @@ else
 	printf '%s\n' "[1mWhich image do you want to flash?[0m"
 
 	: $(( i = 0 ))
-	for opt in "PinePhone 1.0 (Development) device" "PinePhone 1.1 (Brave Heart) or 1.2 (Community Editions) devicnePhone 1.1 (Brave Heart) or 1.2 (Community Editions) device" "PineTab device" "PineTab Dev device" "Dont Be Evil devkit"; do
+	for opt in "PinePhone 1.0 (Development) device" "PinePhone 1.1 (Brave Heart) or 1.2 (Community Editions) device" "PineTab device" "PineTab Dev device" "Dont Be Evil devkit"; do
 		: $(( i += 1 ))
 		printf '%s\n' "$i) $opt"
 	done
