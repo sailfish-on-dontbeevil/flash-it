@@ -286,6 +286,7 @@ printf '%s\n' "[1mCopying kernel to boot partition...[0m"
 mkdir "$MOUNT_BOOT"
 as_root mount "$BOOTPART" "$MOUNT_BOOT" # Mount boot partition
 printf '%s\n' "Boot partition mount: $MOUNT_BOOT"
+as_root chmod a+rx "$MOUNT_DATA/boot"
 as_root cp -r "$MOUNT_DATA/boot"/* "$MOUNT_BOOT"
 
 echo "$MOUNT_BOOT"
