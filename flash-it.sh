@@ -162,10 +162,50 @@ if [ "$CUSTOM" ]; then
 		die "[1m[97m!!! uboot config $CUSTOM/boot.scr not found !!![0m"
 	fi
 else
+<<<<<<< HEAD
 	# Different branch for some reason?
 	if [ "$BRANCH" != "master" ]; then
 		printf '%s\n' "[1m[97m!!! Will flash image from ${BRANCH} branch !!![0m"
 	fi
+=======
+# Different branch for some reason?
+if [ "${BRANCH}" != "master" ]; then
+    echo -e "\e[1m\e[97m!!! Will flash image from ${BRANCH} branch !!!\e[0m"
+fi
+
+# Header
+echo -e "\e[1m\e[91mSailfish OS Pine64 device flasher V$VERSION\e[0m"
+echo "======================================"
+echo ""
+
+# Image selection
+echo -e "\e[1mWhich image do you want to flash?\e[0m"
+select OPTION in "PinePhone 1.0 (Development) device" "PinePhone 1.1 (Brave Heart) or 1.2 (Community Editions) device" "PineTab device" "PineTab Dev device" "Dont Be Evil devkit"; do
+    case $OPTION in
+        "PinePhone 1.0 (Development) device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_1_0_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_1_0_DIR; UBOOT_DEV_DIR=$UBOOT_PINEPHONE_1_0_DIR; break;;
+        "PinePhone 1.1 (Brave Heart) or 1.2 (Community Editions) device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_1_1_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_1_1_DIR; UBOOT_DEV_DIR=$UBOOT_PINEPHONE_1_1_DIR; break;;
+        "PineTab device" ) ROOTFS_JOB=$ROOTFS_PINETAB_JOB; ROOTFS_DIR=$ROOTFS_PINETAB_DIR; UBOOT_DEV_DIR=$UBOOT_PINETAB_DIR; break;;
+        "PineTab Dev device" ) ROOTFS_JOB=$ROOTFS_PINETABDEV_JOB; ROOTFS_DIR=$ROOTFS_PINETABDEV_DIR; UBOOT_DEV_DIR=$UBOOT_PINETABDEV_DIR; break;;
+        "Dont Be Evil devkit" ) ROOTFS_JOB=$ROOTFS_DEVKIT_JOB; ROOTFS_DIR=$ROOTFS_DEVKIT_DIR; UBOOT_DEV_DIR=$UBOOT_DEVKIT_DIR; break;;
+    esac
+done
+
+# Downloading images
+echo -e "\e[1mDownloading images...\e[0m"
+WGET=$(wget_cmd)
+UBOOT_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$UBOOT_JOB"
+$WGET "${UBOOT_JOB}.zip" "${UBOOT_DOWNLOAD}" || {
+	echo >&2 "UBoot image download failed. Aborting."
+	exit 2
+}
+
+UBOOT_DOWNLOAD2="https://gitlab.com/pine64-org/crust-meta/-/jobs/artifacts/master/raw/u-boot-sunxi-with-spl-pinephone.bin?job=build"
+$WGET "u-boot-sunxi-with-spl-pinephone.bin" "${UBOOT_DOWNLOAD2}" || {
+	echo >&2 "UBoot image download failed. Aborting."
+	exit 2
+}
+
+>>>>>>> c95b0249f9f688dc2ca7052309309248bfed39e9
 
 	# Header
 	printf '%s\n' "[1m[91mSailfish OS Pine64 device flasher V$VERSION[0m
@@ -176,7 +216,7 @@ else
 	printf '%s\n' "[1mWhich image do you want to flash?[0m"
 
 	: $(( i = 0 ))
-	for opt in "PinePhone 1.0 (Development) device" "PinePhone 1.1 (Brave Heart) device" "PineTab device" "PineTab Dev device" "Dont Be Evil devkit"; do
+	for opt in "PinePhone 1.0 (Development) device" "PinePhone 1.1 (Brave Heart) or 1.2 (Community Editions) devicnePhone 1.1 (Brave Heart) or 1.2 (Community Editions) device" "PineTab device" "PineTab Dev device" "Dont Be Evil devkit"; do
 		: $(( i += 1 ))
 		printf '%s\n' "$i) $opt"
 	done
