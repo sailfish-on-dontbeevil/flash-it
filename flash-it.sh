@@ -1,18 +1,28 @@
 #!/bin/bash
 
-VERSION="0.3.2"
+VERSION="0.3.3"
 BRANCH=master
 CUSTOM=""
 UBOOT_JOB=u-boot
 UBOOT_DIR=u-boot-bootloader
+
 ROOTFS_PINEPHONE_1_0_JOB=pinephone-1.0-rootfs
 ROOTFS_PINEPHONE_1_1_JOB=pinephone-1.1-rootfs
 ROOTFS_PINETAB_JOB=pinetab-rootfs
+ROOTFS_PINETABDEV_JOB=pinetab-rootfs
 ROOTFS_DEVKIT_JOB=devkit-rootfs
 ROOTFS_PINEPHONE_1_0_DIR=pinephone-1.0
 ROOTFS_PINEPHONE_1_1_DIR=pinephone-1.1
 ROOTFS_PINETAB_DIR=pinetab
+ROOTFS_PINETABDEV_DIR=pinetab
 ROOTFS_DEVKIT_DIR=devkit
+
+UBOOT_PINEPHONE_1_0_DIR=pinephone-1.0
+UBOOT_PINEPHONE_1_1_DIR=pinephone-1.1
+UBOOT_PINETAB_DIR=pinetab
+UBOOT_PINETABDEV_DIR=pinetabdev
+UBOOT_DEVKIT_DIR=devkit
+
 MOUNT_DATA=./data
 MOUNT_BOOT=./boot
 
@@ -78,6 +88,13 @@ function check_dependency {
     }
 }
 
+# Add sbin to the PATH to check for commands available to sudo
+function check_sudo_dependency {
+    dependency=$1
+    local PATH=$PATH:/sbin:/usr/sbin:/usr/local/sbin
+    check_dependency $dependency
+}
+
 # Determine if wget supports the --show-progress option (introduced in
 # 1.16). If so, make use of that instead of spewing out redirects and
 # loads of info into the terminal.
@@ -95,14 +112,14 @@ function wget_cmd {
 }
 
 # Check dependencies
-check_dependency "parted"
 check_dependency "sudo"
 check_dependency "wget"
 check_dependency "tar"
 check_dependency "unzip"
 check_dependency "lsblk"
-check_dependency "mkfs.ext4"
-check_dependency "losetup"
+check_sudo_dependency "parted"
+check_sudo_dependency "mkfs.ext4"
+check_sudo_dependency "losetup"
 
 # If use custom dir check it
 if [ "$CUSTOM" != "" ]; then
@@ -138,12 +155,13 @@ echo ""
 
 # Image selection
 echo -e "\e[1mWhich image do you want to flash?\e[0m"
-select OPTION in "PinePhone 1.0 (Development) device" "PinePhone 1.1 (Brave Heart) device" "PineTab device" "Dont Be Evil devkit"; do
+select OPTION in "PinePhone 1.0 (Development) device" "PinePhone 1.1 (Brave Heart) or 1.2 (Community Editions) device" "PineTab device" "PineTab Dev device" "Dont Be Evil devkit"; do
     case $OPTION in
-        "PinePhone 1.0 (Development) device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_1_0_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_1_0_DIR; break;;
-        "PinePhone 1.1 (Brave Heart) device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_1_1_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_1_1_DIR; break;;
-        "PineTab device" ) ROOTFS_JOB=$ROOTFS_PINETAB_JOB; ROOTFS_DIR=$ROOTFS_PINETAB_DIR; break;;
-        "Dont Be Evil devkit" ) ROOTFS_JOB=$ROOTFS_DEVKIT_JOB; ROOTFS_DIR=$ROOTFS_DEVKIT_DIR; break;;
+        "PinePhone 1.0 (Development) device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_1_0_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_1_0_DIR; UBOOT_DEV_DIR=$UBOOT_PINEPHONE_1_0_DIR; break;;
+        "PinePhone 1.1 (Brave Heart) or 1.2 (Community Editions) device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_1_1_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_1_1_DIR; UBOOT_DEV_DIR=$UBOOT_PINEPHONE_1_1_DIR; break;;
+        "PineTab device" ) ROOTFS_JOB=$ROOTFS_PINETAB_JOB; ROOTFS_DIR=$ROOTFS_PINETAB_DIR; UBOOT_DEV_DIR=$UBOOT_PINETAB_DIR; break;;
+        "PineTab Dev device" ) ROOTFS_JOB=$ROOTFS_PINETABDEV_JOB; ROOTFS_DIR=$ROOTFS_PINETABDEV_DIR; UBOOT_DEV_DIR=$UBOOT_PINETABDEV_DIR; break;;
+        "Dont Be Evil devkit" ) ROOTFS_JOB=$ROOTFS_DEVKIT_JOB; ROOTFS_DIR=$ROOTFS_DEVKIT_DIR; UBOOT_DEV_DIR=$UBOOT_DEVKIT_DIR; break;;
     esac
 done
 
@@ -155,6 +173,13 @@ $WGET "${UBOOT_JOB}.zip" "${UBOOT_DOWNLOAD}" || {
 	echo >&2 "UBoot image download failed. Aborting."
 	exit 2
 }
+
+UBOOT_DOWNLOAD2="https://gitlab.com/pine64-org/crust-meta/-/jobs/artifacts/master/raw/u-boot-sunxi-with-spl-pinephone.bin?job=build"
+$WGET "u-boot-sunxi-with-spl-pinephone.bin" "${UBOOT_DOWNLOAD2}" || {
+	echo >&2 "UBoot image download failed. Aborting."
+	exit 2
+}
+
 
 ROOTFS_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$ROOTFS_JOB"
 $WGET "${ROOTFS_JOB}.zip" "${ROOTFS_DOWNLOAD}" || {
@@ -215,7 +240,7 @@ if [ "$CUSTOM" != "" ]; then
 sudo dd if="${CUSTOM}/u-boot-sunxi-with-spl.bin" of="$DEVICE_NODE" bs=8k seek=1 conv=fsync
 else
 unzip "${UBOOT_JOB}.zip"
-sudo dd if="./u-boot-bootloader/u-boot/u-boot-sunxi-with-spl.bin" of="$DEVICE_NODE" bs=8k seek=1 conv=fsync
+sudo dd if="./u-boot-sunxi-with-spl-pinephone.bin" of="$DEVICE_NODE" bs=8k seek=1 conv=fsync
 fi
 sync
 
@@ -244,7 +269,7 @@ echo `ls $MOUNT_BOOT`
 if [ "$CUSTOM" != "" ]; then
     sudo sh -c "cp '${CUSTOM}/boot.scr' '$MOUNT_BOOT/boot.scr'"
 else
-    sudo sh -c "cp './u-boot-bootloader/$ROOTFS_DIR/boot.scr' '$MOUNT_BOOT/boot.scr'"
+    sudo sh -c "cp './u-boot-bootloader/$UBOOT_DEV_DIR/boot.scr' '$MOUNT_BOOT/boot.scr'"
 fi
 sync
 
