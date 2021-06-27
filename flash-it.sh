@@ -83,7 +83,7 @@ set -- "${POSITIONAL[@]}" # restore positional parameters
 # Error out if the given command is not found on the PATH.
 function check_dependency {
     dependency=$1
-    command -v $dependency >/dev/null 2>&1 || {
+    command -v "${dependency}" >/dev/null 2>&1 || {
         echo >&2 "${dependency} not found. Please make sure it is installed and on your PATH."; exit 1;
     }
 }
@@ -92,7 +92,7 @@ function check_dependency {
 function check_sudo_dependency {
     dependency=$1
     local PATH=$PATH:/sbin:/usr/sbin:/usr/local/sbin
-    check_dependency $dependency
+    check_dependency "${dependency}"
 }
 
 # Determine if wget supports the --show-progress option (introduced in
@@ -192,23 +192,23 @@ fi
 echo -e "\e[1mWhich SD card do you want to flash?\e[0m"
 lsblk
 echo "raw"
-read -p "Device node (/dev/sdX): " DEVICE_NODE
+read -p -r "Device node (/dev/sdX): " DEVICE_NODE
 echo "Flashing image to: $DEVICE_NODE"
 echo "WARNING: All data will be erased! You have been warned!"
 echo "Some commands require root permissions, you might be asked to enter your sudo password."
 
 #create loop file for raw.img
-if [ $DEVICE_NODE == "raw" ]; then
+if [ "${DEVICE_NODE}" == "raw" ]; then
 	sudo dd if=/dev/zero of=sdcard.img bs=1 count=0 seek=4G
 	DEVICE_NODE="./sdcard.img"
 fi
 
 # Creating EXT4 file system
 echo -e "\e[1mCreating EXT4 file system...\e[0m"
-for PARTITION in $(ls ${DEVICE_NODE}*)
+for PARTITION in "${DEVICE_NODE}"*
 do
     echo "Unmounting $PARTITION"
-    sudo umount $PARTITION
+    sudo umount "${PARTITION}"
 done
 sudo parted $DEVICE_NODE mklabel msdos --script
 sudo parted $DEVICE_NODE mkpart primary ext4 1MB 250MB --script
@@ -218,12 +218,12 @@ if [ $DEVICE_NODE == "./sdcard.img" ]; then
 	echo "Prepare loop file"
 	sudo losetup -D
 	sudo losetup -Pf sdcard.img
-	LOOP_NODE=`ls /dev/loop?p1 | cut -c10-10`
+	LOOP_NODE=$(ls /dev/loop?p1 | cut -c10-10)
 	DEVICE_NODE="/dev/loop$LOOP_NODE"
 fi
 
 # use p1, p2 extentions instead of 1, 2 when using sd drives
-if [ $(echo $DEVICE_NODE | grep mmcblk || echo $DEVICE_NODE | grep loop) ]; then
+if [ "$(echo "${DEVICE_NODE}" | grep mmcblk || echo "${DEVICE_NODE}" | grep loop)" ]; then
 	BOOTPART="${DEVICE_NODE}p1"
 	DATAPART="${DEVICE_NODE}p2"
 else
@@ -231,8 +231,8 @@ else
 	DATAPART="${DEVICE_NODE}2"
 fi
 
-sudo mkfs.ext4 -F -L boot $BOOTPART # 1st partition = boot
-sudo mkfs.ext4 -F -L data $DATAPART # 2nd partition = data
+sudo mkfs.ext4 -F -L boot "${BOOTPART}" # 1st partition = boot
+sudo mkfs.ext4 -F -L data "${DATAPART}" # 2nd partition = data
 
 # Flashing u-boot
 echo -e "\e[1mFlashing U-boot...\e[0m"
@@ -251,21 +251,21 @@ if [ "$CUSTOM" != "" ]; then
     TEMP="${CUSTOM}/rootfs.tar.bz2"
 else
     unzip "${ROOTFS_JOB}.zip"
-    TEMP=`ls $ROOTFS_DIR/*/*.tar.bz2`
+    TEMP=$(ls $ROOTFS_DIR/*/*.tar.bz2)
     echo "$TEMP"
 fi
-sudo mount $DATAPART "$MOUNT_DATA" # Mount data partition
+sudo mount "$DATAPART" "$MOUNT_DATA" # Mount data partition
 sudo tar -xpf "$TEMP" -C "$MOUNT_DATA"
 sync
 
 # Copying kernel to boot partition
 echo -e "\e[1mCopying kernel to boot partition...\e[0m"
 mkdir "$MOUNT_BOOT"
-sudo mount $BOOTPART "$MOUNT_BOOT" # Mount boot partition
+sudo mount "$BOOTPART" "$MOUNT_BOOT" # Mount boot partition
 echo "Boot partition mount: $MOUNT_BOOT"
 sudo sh -c "cp -r $MOUNT_DATA/boot/* $MOUNT_BOOT"
 
-echo `ls $MOUNT_BOOT`
+ls "$MOUNT_BOOT"
 if [ "$CUSTOM" != "" ]; then
     sudo sh -c "cp '${CUSTOM}/boot.scr' '$MOUNT_BOOT/boot.scr'"
 else
@@ -275,10 +275,10 @@ sync
 
 # Clean up files
 echo -e "\e[1mCleaning up!\e[0m"
-for PARTITION in $(ls ${DEVICE_NODE}*)
+for PARTITION in "${DEVICE_NODE}"*
 do
     echo "Unmounting $PARTITION"
-    sudo umount $PARTITION
+    sudo umount "$PARTITION"
 done
 
 sudo losetup -D
