@@ -212,7 +212,10 @@ do
 done
 sudo parted $DEVICE_NODE mklabel msdos --script
 sudo parted $DEVICE_NODE mkpart primary ext4 1MB 250MB --script
-sudo parted $DEVICE_NODE mkpart primary ext4 250MB 100% --script
+sudo parted $DEVICE_NODE mkpart primary ext4 250MB 6250MB --script
+
+#Create a 3rd partition for home.  Community encryption will format it.
+sudo parted $DEVICE_NODE mkpart primary ext4 6250MB 100% --script
 
 if [ $DEVICE_NODE == "./sdcard.img" ]; then
 	echo "Prepare loop file"
