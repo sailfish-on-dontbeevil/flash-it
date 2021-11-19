@@ -199,7 +199,7 @@ echo "Some commands require root permissions, you might be asked to enter your s
 
 #create loop file for raw.img
 if [ $DEVICE_NODE == "raw" ]; then
-	sudo dd if=/dev/zero of=sdcard.img bs=1 count=0 seek=4G
+	sudo dd if=/dev/zero of=sdcard.img bs=1 count=0 seek=4G conv=fsync
 	DEVICE_NODE="./sdcard.img"
 fi
 
@@ -240,10 +240,10 @@ sudo mkfs.ext4 -F -L data $DATAPART # 2nd partition = data
 # Flashing u-boot
 echo -e "\e[1mFlashing U-boot...\e[0m"
 if [ "$CUSTOM" != "" ]; then
-sudo dd if="${CUSTOM}/u-boot-sunxi-with-spl.bin" of="$DEVICE_NODE" bs=8k seek=1
+sudo dd if="${CUSTOM}/u-boot-sunxi-with-spl.bin" of="$DEVICE_NODE" bs=8k seek=1 conv=fsync
 else
 unzip "${UBOOT_JOB}.zip"
-sudo dd if="./u-boot-sunxi-with-spl-pinephone.bin" of="$DEVICE_NODE" bs=8k seek=1
+sudo dd if="./u-boot-sunxi-with-spl-pinephone.bin" of="$DEVICE_NODE" bs=8k seek=1 conv=fsync
 fi
 sync
 
