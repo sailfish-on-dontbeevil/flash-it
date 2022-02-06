@@ -10,20 +10,17 @@ ROOTFS_PINEPHONE_1_0_JOB=pinephone-1.0-rootfs
 ROOTFS_PINEPHONE_1_1_JOB=pinephone-1.1-rootfs
 ROOTFS_PINETAB_JOB=pinetab-rootfs
 ROOTFS_PINETABDEV_JOB=pinetab-rootfs
-ROOTFS_DEVKIT_JOB=devkit-rootfs
 ROOTFS_PINEPHONEPRO_JOB=pinephonepro-rootfs
 ROOTFS_PINEPHONE_1_0_DIR=pinephone-1.0
 ROOTFS_PINEPHONE_1_1_DIR=pinephone-1.1
 ROOTFS_PINETAB_DIR=pinetab
 ROOTFS_PINETABDEV_DIR=pinetab
-ROOTFS_DEVKIT_DIR=devkit
 
 ROOTFS_PINEPHONEPRO_DIR=pinephonepro
 UBOOT_PINEPHONE_1_0_DIR=pinephone-1.0
 UBOOT_PINEPHONE_1_1_DIR=pinephone-1.1
 UBOOT_PINETAB_DIR=pinetab
 UBOOT_PINETABDEV_DIR=pinetabdev
-UBOOT_DEVKIT_DIR=devkit
 UBOOT_PINEPHONEPRO_DIR=pinephone-pro
 
 MOUNT_ROOT=./root
@@ -161,13 +158,12 @@ echo ""
 
 # Image selection
 echo -e "\e[1mWhich image do you want to flash?\e[0m"
-select OPTION in "PinePhone 1.0 (Development) device" "PinePhone 1.1 (Brave Heart) or 1.2 (Community Editions) device" "PineTab device" "PineTab Dev device" "Dont Be Evil devkit" "Pinephone Pro"; do
+select OPTION in "PinePhone 1.0 (Development) device" "PinePhone 1.1 (Brave Heart) or 1.2 (Community Editions) device" "PineTab device" "PineTab Dev device" "Pinephone Pro"; do
     case $OPTION in
         "PinePhone 1.0 (Development) device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_1_0_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_1_0_DIR; UBOOT_DEV_DIR=$UBOOT_PINEPHONE_1_0_DIR; break;;
         "PinePhone 1.1 (Brave Heart) or 1.2 (Community Editions) device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_1_1_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_1_1_DIR; UBOOT_DEV_DIR=$UBOOT_PINEPHONE_1_1_DIR; break;;
         "PineTab device" ) ROOTFS_JOB=$ROOTFS_PINETAB_JOB; ROOTFS_DIR=$ROOTFS_PINETAB_DIR; UBOOT_DEV_DIR=$UBOOT_PINETAB_DIR; break;;
         "PineTab Dev device" ) ROOTFS_JOB=$ROOTFS_PINETABDEV_JOB; ROOTFS_DIR=$ROOTFS_PINETABDEV_DIR; UBOOT_DEV_DIR=$UBOOT_PINETABDEV_DIR; break;;
-        "Dont Be Evil devkit" ) ROOTFS_JOB=$ROOTFS_DEVKIT_JOB; ROOTFS_DIR=$ROOTFS_DEVKIT_DIR; UBOOT_DEV_DIR=$UBOOT_DEVKIT_DIR; break;;
 		"Pinephone Pro" ) ROOTFS_JOB=$ROOTFS_PINEPHONEPRO_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONEPRO_DIR; UBOOT_DEV_DIR=$UBOOT_PINEPHONEPRO_DIR; break;;
     esac
 done
@@ -223,7 +219,7 @@ sudo dd if=/dev/zero of=$DEVICE_NODE bs=1M count=32
 
 #Create partitions
 sudo parted $DEVICE_NODE mklabel msdos --script
-sudo parted $DEVICE_NODE mkpart primary fat32 32MB 256MB --script
+sudo parted $DEVICE_NODE mkpart primary ext4 32MB 256MB --script
 sudo parted $DEVICE_NODE mkpart primary ext4 256MB 6250MB --script
 #Create a 3rd partition for home.  Community encryption will format it.
 sudo parted $DEVICE_NODE mkpart primary ext4 6250MB 100% --script
@@ -247,7 +243,7 @@ else
 	HOMEPART="${DEVICE_NODE}3"
 fi
 
-sudo mkfs.vfat -n BOOT $BOOTPART # 1st partition = boot
+sudo mkfs.ext4 -F -L boot $BOOTPART # 1st partition = boot
 sudo mkfs.ext4 -F -L root $ROOTPART # 2nd partition = root
 sudo mkfs.ext4 -F -L home $HOMEPART # 3rd partition = home
 
