@@ -294,10 +294,6 @@ fi
 sync
 
 #Rewrite the home config
-pwd
-ls -lh
-ls $MOUNT_ROOT
-
 read -p "Are you installing to an SD card? " yn
 case $yn in
 	[Yy]* ) sudo sed -i 's/mmcblk2/mmcblk1/' $MOUNT_ROOT/etc/sailfish-device-encryption-community/devices.ini;
