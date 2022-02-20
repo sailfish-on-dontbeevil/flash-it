@@ -295,8 +295,13 @@ sync
 
 #Rewrite the home config
 read -p "Are you installing to an SD card? " yn
+if [ "$OPTION" != "Pinephone Pro" ]; then
+    DEVICESD="mmcblk0"
+else
+    DEVICESD="mmcblk1"
+fi
 case $yn in
-	[Yy]* ) sudo sed -i 's/mmcblk2/mmcblk1/' $MOUNT_ROOT/etc/sailfish-device-encryption-community/devices.ini;
+	[Yy]* ) sudo sed -i "s/mmcblk2/$DEVICESD/" $MOUNT_ROOT/etc/sailfish-device-encryption-community/devices.ini;
 esac
 
 read -p "Clear root password? " yn
