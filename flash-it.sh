@@ -58,7 +58,7 @@ case $key in
                "				and u-boot-sunxi-with-spl.bin into dir and system will "\
                "				installed from it" \
                "	-b, --branch BRANCH	Download images from a specific Git branch." \
-               "	-t, --towboot		Do not install the u-boot bootloader (mbr) on sdcard,"\
+               "	-t, --towboot		Do not install the u-boot bootloader (mbr) on sdcard," \
 	       "				I have towboot installed on emmc and boot with vol+dn from sd."\
                "	-h, --help		Print this help and exit." \
                "" \
