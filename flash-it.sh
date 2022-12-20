@@ -1,10 +1,11 @@
 #!/bin/bash
 
-VERSION="0.3.3"
+VERSION="0.3.4"
 BRANCH=master
 CUSTOM=""
 UBOOT_JOB=u-boot
 UBOOT_DIR=u-boot-bootloader
+TOWBOOT="NO"
 
 ROOTFS_PINEPHONE_1_0_JOB=pinephone-1.0-rootfs
 ROOTFS_PINEPHONE_1_1_JOB=pinephone-1.1-rootfs
@@ -55,8 +56,10 @@ case $key in
                "" \
                "	-c, --custom		Install from custom dir. Just put you rootfs.tar.bz2" \
                "				and u-boot-sunxi-with-spl.bin into dir and system will "\
-               "				istalled from it" \
+               "				installed from it" \
                "	-b, --branch BRANCH	Download images from a specific Git branch." \
+               "	-t, --towboot		Do not install the u-boot bootloader (mbr) on sdcard,"\
+	       "				I have towboot installed on emmc and boot with vol+dn from sd."\
                "	-h, --help		Print this help and exit." \
                "" \
                "This command requires: parted, sudo, wget, tar, unzip, lsblk," \
@@ -71,6 +74,10 @@ case $key in
 	-c|--custom)
 		CUSTOM="$2"
 		shift
+		shift
+		;;
+	-t|--towboot)
+		TOWBOOT="YES"
 		shift
 		;;
     *) # unknown argument
@@ -136,9 +143,11 @@ if [ "$CUSTOM" != "" ]; then
 		exit 2;
 	fi
 
-	if ! [ -f "$CUSTOM/u-boot-sunxi-with-spl.bin" ]; then
-		echo -e "\e[1m\e[97m!!! uboot image ${CUSTOM}/u-boot-sunxi-with-spl.bin not found !!!\e[0m"
-		exit 2;
+	if [ "$TOWBOOT" != "YES" ]; then
+		if ! [ -f "$CUSTOM/u-boot-sunxi-with-spl.bin" ]; then
+			echo -e "\e[1m\e[97m!!! uboot image ${CUSTOM}/u-boot-sunxi-with-spl.bin not found !!!\e[0m"
+			exit 2;
+		fi
 	fi
 
 	if ! [ -f "$CUSTOM/boot.scr" ]; then
@@ -164,7 +173,7 @@ select OPTION in "PinePhone 1.0 (Development) device" "PinePhone 1.1 (Brave Hear
         "PinePhone 1.1 (Brave Heart) or 1.2 (Community Editions) device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_1_1_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_1_1_DIR; UBOOT_DEV_DIR=$UBOOT_PINEPHONE_1_1_DIR; break;;
         "PineTab device" ) ROOTFS_JOB=$ROOTFS_PINETAB_JOB; ROOTFS_DIR=$ROOTFS_PINETAB_DIR; UBOOT_DEV_DIR=$UBOOT_PINETAB_DIR; break;;
         "PineTab Dev device" ) ROOTFS_JOB=$ROOTFS_PINETABDEV_JOB; ROOTFS_DIR=$ROOTFS_PINETABDEV_DIR; UBOOT_DEV_DIR=$UBOOT_PINETABDEV_DIR; break;;
-		"Pinephone Pro" ) ROOTFS_JOB=$ROOTFS_PINEPHONEPRO_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONEPRO_DIR; UBOOT_DEV_DIR=$UBOOT_PINEPHONEPRO_DIR; break;;
+	"Pinephone Pro" ) ROOTFS_JOB=$ROOTFS_PINEPHONEPRO_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONEPRO_DIR; UBOOT_DEV_DIR=$UBOOT_PINEPHONEPRO_DIR; break;;
     esac
 done
 
@@ -177,11 +186,15 @@ $WGET "${UBOOT_JOB}.zip" "${UBOOT_URL}" || {
 	exit 2
 }
 
-UBOOT_DOWNLOAD2="https://gitlab.com/pine64-org/crust-meta/-/jobs/artifacts/master/raw/u-boot-sunxi-with-spl-pinephone.bin?job=build"
-$WGET "u-boot-sunxi-with-spl-pinephone.bin" "${UBOOT_DOWNLOAD2}" || {
-	echo >&2 "UBoot image download failed. Aborting."
-	exit 2
-}
+if [ "$TOWBOOT" != "YES" ]; then
+	UBOOT_DOWNLOAD2="https://gitlab.com/pine64-org/crust-meta/-/jobs/artifacts/master/raw/u-boot-sunxi-with-spl-pinephone.bin?job=build"
+	$WGET "u-boot-sunxi-with-spl-pinephone.bin" "${UBOOT_DOWNLOAD2}" || {
+		echo >&2 "UBoot image download failed. Aborting."
+		exit 2
+	}
+else
+  echo "No UBoot bootloader was downloaded. Use towboot."
+fi
 
 
 ROOTFS_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$ROOTFS_JOB"
@@ -202,20 +215,20 @@ echo "Some commands require root permissions, you might be asked to enter your s
 
 #create loop file for raw.img
 if [ $DEVICE_NODE == "raw" ]; then
-	sudo dd if=/dev/zero of=sdcard.img bs=1 count=0 seek=4G
 	DEVICE_NODE="./sdcard.img"
+	sudo dd if=/dev/zero of="$DEVICE_NODE" bs=1 count=0 seek=8G
+else
+	for PARTITION in $(ls ${DEVICE_NODE}*)
+	do
+		echo "Unmounting $PARTITION"
+		sudo umount $PARTITION
+	done
+	#Wipe the first 32MB
+	sudo dd if=/dev/zero of=$DEVICE_NODE bs=1M count=32
 fi
 
 # Creating EXT4 file system
 echo -e "\e[1mCreating EXT4 file system...\e[0m"
-for PARTITION in $(ls ${DEVICE_NODE}*)
-do
-    echo "Unmounting $PARTITION"
-    sudo umount $PARTITION
-done
-
-#Wipe the first 32MB
-sudo dd if=/dev/zero of=$DEVICE_NODE bs=1M count=32
 
 #Create partitions
 sudo parted $DEVICE_NODE mklabel msdos --script
@@ -248,21 +261,26 @@ sudo mkfs.ext4 -F -L root $ROOTPART # 2nd partition = root
 sudo mkfs.ext4 -F -L home $HOMEPART # 3rd partition = home
 
 # Flashing u-boot
-echo -e "\e[1mFlashing U-boot...\e[0m"
-if [ "$CUSTOM" != "" ]; then
-	sudo dd if="${CUSTOM}/u-boot-sunxi-with-spl.bin" of="$DEVICE_NODE" bs=8k seek=1
+if [ "$TOWBOOT" != "YES" ]; then
+	echo -e "\e[1mFlashing U-boot...\e[0m"
+	if [ "$CUSTOM" != "" ]; then
+		sudo dd if="${CUSTOM}/u-boot-sunxi-with-spl.bin" of="$DEVICE_NODE" bs=8k seek=1
+	else
+		unzip -d $UBOOT_DIR "${UBOOT_JOB}.zip"
+		if [ "$OPTION" != "Pinephone Pro" ]; then
+			sudo dd if="./u-boot-sunxi-with-spl-pinephone.bin" of="$DEVICE_NODE" bs=8k seek=1 conv=notrunc,fsync
+		else
+			echo -e "\e[1mFlashing ./$UBOOT_DIR/u-boot/idbloader.img\e[0m"
+			sudo dd if="./$UBOOT_DIR/u-boot/idbloader.img" of="$DEVICE_NODE" seek=64 conv=notrunc,fsync
+			echo -e "\e[1mFlashing ./$UBOOT_DIR/u-boot/u-boot.itb\e[0m"
+			sudo dd if="./$UBOOT_DIR/u-boot/u-boot.itb" of="$DEVICE_NODE" seek=16384 conv=notrunc,fsync
+		fi
+	fi
+	sync
 else
 	unzip -d $UBOOT_DIR "${UBOOT_JOB}.zip"
-	if [ "$OPTION" != "Pinephone Pro" ]; then
-		sudo dd if="./u-boot-sunxi-with-spl-pinephone.bin" of="$DEVICE_NODE" bs=8k seek=1 conv=notrunc,fsync
-	else
-		echo -e "\e[1mFlashing ./$UBOOT_DIR/u-boot/idbloader.img\e[0m"
-		sudo dd if="./$UBOOT_DIR/u-boot/idbloader.img" of="$DEVICE_NODE" seek=64 conv=notrunc,fsync
-		echo -e "\e[1mFlashing ./$UBOOT_DIR/u-boot/u-boot.itb\e[0m"
-		sudo dd if="./$UBOOT_DIR/u-boot/u-boot.itb" of="$DEVICE_NODE" seek=16384 conv=notrunc,fsync
-	fi
+	echo "No UBoot bootloader was flashed. Use towboot."
 fi
-sync
 
 # Flashing rootFS
 echo -e "\e[1mFlashing rootFS...\e[0m"
@@ -314,7 +332,7 @@ echo -e "\e[1mCleaning up!\e[0m"
 for PARTITION in $(ls ${DEVICE_NODE}*)
 do
     echo "Unmounting $PARTITION"
-    sudo umount $PARTITION
+    sudo umount -q $PARTITION
 done
 
 sudo losetup -D
