@@ -1,10 +1,8 @@
 #!/bin/bash
 
-VERSION="0.3.3"
+VERSION="0.4.0"
 BRANCH=master
 CUSTOM=""
-UBOOT_JOB=u-boot
-UBOOT_DIR=u-boot-bootloader
 
 ROOTFS_PINEPHONE_1_0_JOB=pinephone-1.0-rootfs
 ROOTFS_PINEPHONE_1_1_JOB=pinephone-1.1-rootfs
@@ -15,18 +13,16 @@ ROOTFS_PINEPHONE_1_0_DIR=pinephone-1.0
 ROOTFS_PINEPHONE_1_1_DIR=pinephone-1.1
 ROOTFS_PINETAB_DIR=pinetab
 ROOTFS_PINETABDEV_DIR=pinetab
-
 ROOTFS_PINEPHONEPRO_DIR=pinephonepro
-UBOOT_PINEPHONE_1_0_DIR=pinephone-1.0
-UBOOT_PINEPHONE_1_1_DIR=pinephone-1.1
-UBOOT_PINETAB_DIR=pinetab
-UBOOT_PINETABDEV_DIR=pinetabdev
-UBOOT_PINEPHONEPRO_DIR=pinephone-pro
+
+UBOOT_PINEPHONE_1_0_FILE=boot.pinephone10.scr
+UBOOT_PINEPHONE_1_1_FILE=boot.pinephone11.scr
+UBOOT_PINETAB_FILE=boot.pinetab.scr
+UBOOT_PINETABDEV_FILE=boot.pinetabdev.scr
+UBOOT_PINEPHONEPRO_FILE=boot.pinephonepro.scr
 
 MOUNT_ROOT=./root
 MOUNT_BOOT=./boot
-
-UBOOT_URL=`curl -s https://api.github.com/repos/sailfish-on-dontbeevil/u-boot-bootloader/releases/latest | jq '[.assets[] | {name : .name, browser_download_url : .browser_download_url}]' | jq -r '.[] | .browser_download_url'`
 
 # Parse arguments
 # https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
@@ -123,6 +119,7 @@ check_dependency "jq"
 check_sudo_dependency "parted"
 check_sudo_dependency "mkfs.ext4"
 check_sudo_dependency "losetup"
+check_sudo_dependency "sfdisk"
 
 # If use custom dir check it
 if [ "$CUSTOM" != "" ]; then
@@ -133,11 +130,6 @@ if [ "$CUSTOM" != "" ]; then
 
 	if ! [ -f "$CUSTOM/rootfs.tar.bz2" ]; then
 		echo -e "\e[1m\e[97m!!! rootfs ${CUSTOM}/rootfs.tar.bz2 not found !!!\e[0m"
-		exit 2;
-	fi
-
-	if ! [ -f "$CUSTOM/u-boot-sunxi-with-spl.bin" ]; then
-		echo -e "\e[1m\e[97m!!! uboot image ${CUSTOM}/u-boot-sunxi-with-spl.bin not found !!!\e[0m"
 		exit 2;
 	fi
 
@@ -153,41 +145,35 @@ fi
 
 # Header
 echo -e "\e[1m\e[91mSailfish OS Pine64 device flasher V$VERSION\e[0m"
-echo "======================================"
+echo "========================================"
 echo ""
+echo "NOTE: Before continuing installation, please ensure you have TowBoot installed on your device"
+echo "See https://tow-boot.org/devices/index.html for guidance on installation"
+echo "This script has been tested with Towboot installed on the Pinephone EMMC and PinephonePro SPI"
+echo ""
+
 
 # Image selection
 echo -e "\e[1mWhich image do you want to flash?\e[0m"
 select OPTION in "PinePhone 1.0 (Development) device" "PinePhone 1.1 (Brave Heart) or 1.2 (Community Editions) device" "PineTab device" "PineTab Dev device" "Pinephone Pro"; do
     case $OPTION in
-        "PinePhone 1.0 (Development) device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_1_0_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_1_0_DIR; UBOOT_DEV_DIR=$UBOOT_PINEPHONE_1_0_DIR; break;;
-        "PinePhone 1.1 (Brave Heart) or 1.2 (Community Editions) device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_1_1_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_1_1_DIR; UBOOT_DEV_DIR=$UBOOT_PINEPHONE_1_1_DIR; break;;
-        "PineTab device" ) ROOTFS_JOB=$ROOTFS_PINETAB_JOB; ROOTFS_DIR=$ROOTFS_PINETAB_DIR; UBOOT_DEV_DIR=$UBOOT_PINETAB_DIR; break;;
-        "PineTab Dev device" ) ROOTFS_JOB=$ROOTFS_PINETABDEV_JOB; ROOTFS_DIR=$ROOTFS_PINETABDEV_DIR; UBOOT_DEV_DIR=$UBOOT_PINETABDEV_DIR; break;;
-		"Pinephone Pro" ) ROOTFS_JOB=$ROOTFS_PINEPHONEPRO_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONEPRO_DIR; UBOOT_DEV_DIR=$UBOOT_PINEPHONEPRO_DIR; break;;
+        "PinePhone 1.0 (Development) device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_1_0_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_1_0_DIR; UBOOT_FILE=$UBOOT_PINEPHONE_1_0_FILE; break;;
+        "PinePhone 1.1 (Brave Heart) or 1.2 (Community Editions) device" ) ROOTFS_JOB=$ROOTFS_PINEPHONE_1_1_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONE_1_1_DIR; UBOOT_FILE=$UBOOT_PINEPHONE_1_1_FILE; break;;
+        "PineTab device" ) ROOTFS_JOB=$ROOTFS_PINETAB_JOB; ROOTFS_DIR=$ROOTFS_PINETAB_DIR; UBOOT_FILE=$UBOOT_PINETAB_FILE; break;;
+        "PineTab Dev device" ) ROOTFS_JOB=$ROOTFS_PINETABDEV_JOB; ROOTFS_DIR=$ROOTFS_PINETABDEV_DIR; UBOOT_FILE=$UBOOT_PINETABDEV_FILE; break;;
+        "Pinephone Pro" ) ROOTFS_JOB=$ROOTFS_PINEPHONEPRO_JOB; ROOTFS_DIR=$ROOTFS_PINEPHONEPRO_DIR; UBOOT_FILE=$UBOOT_PINEPHONEPRO_FILE; break;;
     esac
 done
 
 # Downloading images
 echo -e "\e[1mDownloading images...\e[0m"
-echo -e "\e[1m${UBOOT_URL}\e[0m"
 WGET=$(wget_cmd)
-$WGET "${UBOOT_JOB}.zip" "${UBOOT_URL}" || {
-	echo >&2 "UBoot image download failed. Aborting."
-	exit 2
-}
-
-UBOOT_DOWNLOAD2="https://gitlab.com/pine64-org/crust-meta/-/jobs/artifacts/master/raw/u-boot-sunxi-with-spl-pinephone.bin?job=build"
-$WGET "u-boot-sunxi-with-spl-pinephone.bin" "${UBOOT_DOWNLOAD2}" || {
-	echo >&2 "UBoot image download failed. Aborting."
-	exit 2
-}
-
 
 ROOTFS_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$ROOTFS_JOB"
+echo $ROOTFS_DOWNLOAD
 $WGET "${ROOTFS_JOB}.zip" "${ROOTFS_DOWNLOAD}" || {
 	echo >&2 "Root filesystem image download failed. Aborting."
-	exit 2
+	exit 2Clicbox Kitchen Cabinet Base Unit 1000mm
 }
 fi
 
@@ -214,15 +200,15 @@ do
     sudo umount $PARTITION
 done
 
-#Wipe the first 32MB
-sudo dd if=/dev/zero of=$DEVICE_NODE bs=1M count=32
+#Delete all partitions
+sudo sfdisk --delete $DEVICE_NODE
 
 #Create partitions
 sudo parted $DEVICE_NODE mklabel msdos --script
 sudo parted $DEVICE_NODE mkpart primary ext4 32MB 256MB --script
-sudo parted $DEVICE_NODE mkpart primary ext4 256MB 6250MB --script
+sudo parted $DEVICE_NODE mkpart primary ext4 256MB 8192MB --script
 #Create a 3rd partition for home.  Community encryption will format it.
-sudo parted $DEVICE_NODE mkpart primary ext4 6250MB 100% --script
+sudo parted $DEVICE_NODE mkpart primary ext4 8192MB 100% --script
 
 if [ $DEVICE_NODE == "./sdcard.img" ]; then
 	echo "Prepare loop file"
@@ -247,23 +233,6 @@ sudo mkfs.ext4 -F -L boot $BOOTPART # 1st partition = boot
 sudo mkfs.ext4 -F -L root $ROOTPART # 2nd partition = root
 sudo mkfs.ext4 -F -L home $HOMEPART # 3rd partition = home
 
-# Flashing u-boot
-echo -e "\e[1mFlashing U-boot...\e[0m"
-if [ "$CUSTOM" != "" ]; then
-	sudo dd if="${CUSTOM}/u-boot-sunxi-with-spl.bin" of="$DEVICE_NODE" bs=8k seek=1
-else
-	unzip -d $UBOOT_DIR "${UBOOT_JOB}.zip"
-	if [ "$OPTION" != "Pinephone Pro" ]; then
-		sudo dd if="./u-boot-sunxi-with-spl-pinephone.bin" of="$DEVICE_NODE" bs=8k seek=1 conv=notrunc,fsync
-	else
-		echo -e "\e[1mFlashing ./$UBOOT_DIR/u-boot/idbloader.img\e[0m"
-		sudo dd if="./$UBOOT_DIR/u-boot/idbloader.img" of="$DEVICE_NODE" seek=64 conv=notrunc,fsync
-		echo -e "\e[1mFlashing ./$UBOOT_DIR/u-boot/u-boot.itb\e[0m"
-		sudo dd if="./$UBOOT_DIR/u-boot/u-boot.itb" of="$DEVICE_NODE" seek=16384 conv=notrunc,fsync
-	fi
-fi
-sync
-
 # Flashing rootFS
 echo -e "\e[1mFlashing rootFS...\e[0m"
 mkdir "$MOUNT_ROOT"
@@ -286,10 +255,11 @@ echo "Boot partition mount: $MOUNT_BOOT"
 sudo sh -c "cp -r $MOUNT_ROOT/boot/* $MOUNT_BOOT"
 
 echo `ls $MOUNT_BOOT`
+echo -e "\e[1mCopying UBoot script to boot partition...\e[0m"
 if [ "$CUSTOM" != "" ]; then
     sudo sh -c "cp '${CUSTOM}/boot.scr' '$MOUNT_BOOT/boot.scr'"
 else
-    sudo sh -c "cp './$UBOOT_DIR/$UBOOT_DEV_DIR/boot.scr' '$MOUNT_BOOT/boot.scr'"
+    sudo sh -c "cp '$MOUNT_BOOT/$UBOOT_FILE' '$MOUNT_BOOT/boot.scr'"
 fi
 sync
 
@@ -320,8 +290,6 @@ done
 sudo losetup -D
 
 if [ "$CUSTOM" == "" ]; then
-    rm "${UBOOT_JOB}.zip"
-    rm -r "$UBOOT_DIR"
     rm "${ROOTFS_JOB}.zip"
     rm -r "$ROOTFS_DIR"
 fi
