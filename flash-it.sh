@@ -173,7 +173,7 @@ ROOTFS_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs
 echo $ROOTFS_DOWNLOAD
 $WGET "${ROOTFS_JOB}.zip" "${ROOTFS_DOWNLOAD}" || {
 	echo >&2 "Root filesystem image download failed. Aborting."
-	exit 2Clicbox Kitchen Cabinet Base Unit 1000mm
+	exit 2
 }
 fi
 
