@@ -173,13 +173,20 @@ done
 # Downloading images
 echo -e "\e[1mDownloading images...\e[0m"
 WGET=$(wget_cmd)
-
 ROOTFS_DOWNLOAD="https://gitlab.com/sailfishos-porters-ci/dont_be_evil-ci/-/jobs/artifacts/$BRANCH/download?job=$ROOTFS_JOB"
 echo $ROOTFS_DOWNLOAD
-$WGET "${ROOTFS_JOB}.zip" "${ROOTFS_DOWNLOAD}" || {
-	echo >&2 "Root filesystem image download failed. Aborting."
-	exit 2
-}
+if [ -f "${ROOTFS_JOB}.zip" ]; then
+    read -p "${ROOTFS_JOB}.zip exists. Do you want to keep it? " yn
+    case $yn in
+        [Nn]* ) rm "${ROOTFS_JOB}.zip";
+    esac
+fi
+if [ ! -f "${ROOTFS_JOB}.zip" ]; then
+    $WGET "${ROOTFS_JOB}.zip" "${ROOTFS_DOWNLOAD}" || {
+        echo >&2 "Root filesystem image download failed. Aborting."
+        exit 2
+    }
+    fi
 fi
 
 # Select flash target
@@ -193,8 +200,8 @@ echo "Some commands require root permissions, you might be asked to enter your s
 
 #create loop file for raw.img
 if [ $DEVICE_NODE == "raw" ]; then
-	sudo dd if=/dev/zero of=sdcard.img bs=1 count=0 seek=4G
-	DEVICE_NODE="./sdcard.img"
+	sudo dd if=/dev/zero of=${ROOTFS_JOB}.img bs=1 count=0 seek=16G
+	DEVICE_NODE="./${ROOTFS_JOB}.img"
 fi
 
 # Creating EXT4 file system
@@ -215,11 +222,11 @@ sudo parted $DEVICE_NODE mkpart primary ext4 256MB 8192MB --script
 #Create a 3rd partition for home.  Community encryption will format it.
 sudo parted $DEVICE_NODE mkpart primary ext4 8192MB 100% --script
 
-if [ $DEVICE_NODE == "./sdcard.img" ]; then
+if [ $DEVICE_NODE == "./${ROOTFS_JOB}.img" ]; then
 	echo "Prepare loop file"
 	sudo losetup -D
-	sudo losetup -Pf sdcard.img
-	LOOP_NODE=`ls /dev/loop?p1 | cut -c10-10`
+	sudo losetup -Pf ${ROOTFS_JOB}.img
+	LOOP_NODE=$(ls /dev/loop?p1 | cut -c10-10)
 	DEVICE_NODE="/dev/loop$LOOP_NODE"
 fi
 
@@ -245,11 +252,12 @@ if [ "$CUSTOM" != "" ]; then
     TEMP="${CUSTOM}/rootfs.tar.bz2"
 else
     unzip "${ROOTFS_JOB}.zip"
-    TEMP=`ls $ROOTFS_DIR/*/*.tar.bz2`
+    TEMP=$(ls $ROOTFS_DIR/*/*.tar.bz2)
     echo "$TEMP"
 fi
 sudo mount $ROOTPART "$MOUNT_ROOT" # Mount root partition
 sudo tar -xpf "$TEMP" -C "$MOUNT_ROOT"
+# TODO: pinephone 1.0: tar (child): lbzip2: Cannot exec: No such file or directory
 sync
 
 # Copying kernel to boot partition
@@ -262,7 +270,7 @@ sudo sh -c "cp -r $MOUNT_ROOT/boot/* $MOUNT_BOOT"
 
 #Only copy boot script if not Pinetab2
 if [ "$OPTION" != "Pinetab 2" ]; then
-    echo `ls $MOUNT_BOOT`
+    echo $(ls $MOUNT_BOOT)
     echo -e "\e[1mCopying UBoot script to boot partition...\e[0m"
     if [ "$CUSTOM" != "" ]; then
         sudo sh -c "cp '${CUSTOM}/boot.scr' '$MOUNT_BOOT/boot.scr'"
@@ -279,7 +287,7 @@ else
         esac
     fi
     #Rewrite the boot config
-    PARTUUID=`sudo blkid $ROOTPART -s PARTUUID -o value`
+    PARTUUID=$(sudo blkid $ROOTPART -s PARTUUID -o value)
     sed "s/ROOTUUID/$PARTUUID/" $MOUNT_BOOT/extlinux/extlinux.conf.in | sudo tee $MOUNT_BOOT/extlinux/extlinux.conf > /dev/null;
 fi
 
@@ -308,6 +316,11 @@ do
 done
 
 sudo losetup -D
+
+read -p "Do you want to keep ${ROOTFS_JOB}.zip? " yn
+case $yn in
+	[Yy]* ) CUSTOM=true; rm -r "$ROOTFS_DIR";
+esac
 
 if [ "$CUSTOM" == "" ]; then
     rm "${ROOTFS_JOB}.zip"
