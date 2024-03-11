@@ -317,10 +317,12 @@ done
 
 sudo losetup -D
 
-read -p "Do you want to keep ${ROOTFS_JOB}.zip? " yn
-case $yn in
-	[Yy]* ) CUSTOM=true; rm -r "$ROOTFS_DIR";
-esac
+if [ "$CUSTOM" == "" ]; then
+	read -p "Do you want to keep ${ROOTFS_JOB}.zip? " yn
+	case $yn in
+		[Yy]* ) CUSTOM=true; rm -r "$ROOTFS_DIR";
+	esac
+fi
 
 if [ "$CUSTOM" == "" ]; then
     rm "${ROOTFS_JOB}.zip"
