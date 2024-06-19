@@ -295,11 +295,17 @@ fi
 read -p "Are you installing to an SD card? " yn
 if [ "$OPTION" == "Pinephone Pro" ]; then
     DEVICESD="mmcblk1"
+    DEVICEEMMC="mmcblk2"
+elif [ "$OPTION" == "Pinetab 2" ]; then
+    DEVICESD="mmcblk0"
+    DEVICEEMMC="mmcblk1"
 else
     DEVICESD="mmcblk0"
+    DEVICEEMMC="mmcblk2"
 fi
+
 case $yn in
-	[Yy]* ) sudo sed -i "s/mmcblk2/$DEVICESD/" $MOUNT_ROOT/etc/sailfish-device-encryption-community/devices.ini;
+	[Yy]* ) sudo sed -i "s/$DEVICEEMMC/$DEVICESD/" $MOUNT_ROOT/etc/sailfish-device-encryption-community/devices.ini;
 esac
 
 read -p "Clear root password? " yn
