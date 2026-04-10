@@ -297,8 +297,8 @@ if [ "$OPTION" == "Pinephone Pro" ]; then
     DEVICESD="mmcblk1"
     DEVICEEMMC="mmcblk2"
 elif [ "$OPTION" == "Pinetab 2" ]; then
-    DEVICESD="mmcblk0"
-    DEVICEEMMC="mmcblk1"
+    DEVICESD="mmcblk1"
+    DEVICEEMMC="mmcblk0"
 else
     DEVICESD="mmcblk0"
     DEVICEEMMC="mmcblk2"
