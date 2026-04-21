@@ -101,16 +101,16 @@ function check_sudo_dependency {
 # 1.16). If so, make use of that instead of spewing out redirects and
 # loads of info into the terminal.
 function wget_cmd {
-    wget --show-progress > /dev/null 2>&1
-    status=$?
+    #wget --show-progress > /dev/null 2>&1
+    #status=$?
 
     # Exit code 2 means command parsing error (i.e. option does not
     # exist).
-    if [ "$status" == "2" ]; then
+    #if [ "$status" == "2" ]; then
         echo "wget -O"
-    else
-        echo "wget -q --show-progress -O"
-    fi
+    #else
+        #echo "wget -q --show-progress -O"
+    #fi
 }
 
 # Check dependencies
