@@ -333,6 +333,7 @@ fi
 if [ "$CUSTOM" == "" ]; then
     rm "${ROOTFS_JOB}.zip"
     rm -r "$ROOTFS_DIR"
+    rm "u-boot-sunxi-with-spl-pinephone.bin"
 fi
 sudo rm -rf "$MOUNT_ROOT"
 sudo rm -rf "$MOUNT_BOOT"
